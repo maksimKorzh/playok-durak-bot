@@ -265,8 +265,15 @@ function connect(ksession) {
     if (response.i[0] == 90) {
       let position = decodePosition(response.i);
       console.log('response 90:', response.i);
-      if (response.i[3] == -1) activeGame = 0;
-      else {
+      if (response.i[3] == -1) {
+        activeGame = 0;
+        setTimeout(function() {
+          if (!activeGame) {
+            console.log('game finished');
+            message(socket, 'leave', TABLE);
+          }
+        }, 5000);
+      } else {
         activeGame = 1;
         if (response.i[3]) {
           let move = '';
@@ -277,24 +284,14 @@ function connect(ksession) {
           if (move == 'pass') {
             message = {"i":[92,TABLE,8,0,0]}
             message = JSON.stringify(message);
-            console.log(message);
           } else {
             let card = encodeCard(move);
             move = {"i": [92, TABLE, 8, 0, (card+128)&-5, 0]};
             message = JSON.stringify(move);
-            console.log(message);
           }
-          setTimeout(function () { socket.send(message); }, 1000);
+          setTimeout(function () { socket.send(message); }, 10);
         }
       }
-    }
-
-    if (response.i[0] == 81 && response.i[1] == TABLE) { // chat messages & system notifications
-      console.log('\n\n\n\n\n(CHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAT) ' + response.s[0]);
-      if (response.s[0].includes('loses') ||
-          response.s[0].includes('exceeded')) {
-          message(socket, 'leave', TABLE);
-        }
     }
   });
   socket.on('error', function (error) { console.log('playok: error'); });
