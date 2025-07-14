@@ -9,6 +9,7 @@ const originalLog = console.log;
 var joinedTable = 0;
 var activeGame = 0;
 var TABLE = 0;
+var botSide = '';
 
 function encodeCard(card) {
   if (card == undefined) return 0;
@@ -51,7 +52,7 @@ function decodePosition(board) {
         }
         break;
       case 13: // cards in hand
-        if (board[i+1] == 1) {
+        if (board[i+1] == (botSide == 'player2' ? 1 : 0)) {
           for (let j=i+4; j <= i+3+board[i+3]; j++) {
             if (board[j] >= 24 && board[j] <= 115)
               hand.push(decodeCard(board[j]));
@@ -68,6 +69,7 @@ function decodePosition(board) {
 }
 
 function attack(playout, hand, trump) {
+  console.log('attack:', playout, hand, trump);
   const rankOrder = {2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13,A:14};
   const trumpSuit = trump.slice(-1);
   const getRank = card => card.length === 3 ? card.slice(0, 2) : card[0];
@@ -92,6 +94,7 @@ function attack(playout, hand, trump) {
 }
 
 function defend(playout, hand, trump) {
+  console.log('deffend:', playout, hand, trump);
   const rankOrder = {2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13,A:14};
   const getRank = card => card.length === 3 ? card.slice(0, 2) : card[0];
   const getSuit = card => card.slice(-1);
@@ -147,14 +150,17 @@ function message(socket, action, table) {
       TABLE = 0;
       joinedTable = 0;
       activeGame = 0;
+      botSide = '';
       break;
     case 'player2':
       request.i = [83, table, 1];
       console.log('took player2 place at table #' + table);
+      botSide = 'player2';
       break;
     case 'player1':
       request.i = [83, table, 0];
       console.log('took player1 place at table #' + table);
+      botSide = 'player1';
       break;
     case 'start':
       activeGame = 0;
@@ -226,7 +232,8 @@ function connect(ksession) {
     const initialMessage = JSON.stringify({
       "i":[1742],
       "s":[
-        ksession,
+        //ksession,
+        "+442266185138966324|1249210350|15421574", //  tgb6968g
         "en",
         "b",
         "",
@@ -252,7 +259,7 @@ function connect(ksession) {
       if (joinedTable == 1) return;
    
       // DEBUG
-      //if (player1 != 'cft7821g') return;
+      if (player2 != 'cft7821g') return;
 
       // 2 players
       if (response.i[5] == 3 && response.i[6] == 3) {
@@ -268,12 +275,13 @@ function connect(ksession) {
         setTimeout(function() {
           if (!activeGame) {
             console.log('game finished');
-            message(socket, 'leave', TABLE);
+            if (TABLE) message(socket, 'leave', TABLE);
           }
         }, 5000);
       } else {
         activeGame = 1;
-        if (response.i[3]) {
+        console.log(response.i);
+        if (response.i[3]) { // player1 == 0
           let move = '';
           if (response.i[response.i.length-7] == 1) move = defend(position.playout, position.hand, position.trump);
           if (response.i[response.i.length-7] == 0) move = attack(position.playout, position.hand, position.trump);
@@ -287,7 +295,7 @@ function connect(ksession) {
             move = {"i": [92, TABLE, 8, 0, (card+128)&-5, 0]};
             message = JSON.stringify(move);
           }
-          setTimeout(function () { socket.send(message); }, 10);
+          setTimeout(function () { socket.send(message); }, 500);
         }
       }
     }
@@ -300,22 +308,33 @@ function connect(ksession) {
 }
 
 function debug() {
-  let r = [
-    90,  119, 54,  1,  8,  3,  8,   1, 1872, -1,  10,
-     1, 1640, 11, 11, 75, 99, 74,  56,   98, 64,  57,
-    72,   97, 88, 89, 15,  0, 12,   0,   13,  0,  12,
-     0,   13,  1,  1,  1, 58, 13,   2,    0,  0,  13,
-     3,    0,  0, 14,  0,  2,  1,   5,    1,  1,   1,
-     0,    0,  3,  1,  2,  5,  0, 325,    0,  0, 374,
-     1,    0,  0,  0,  0,  0,  0
-  ]
+  let player2 = [
+    90,  108, 48, 1,   8,   3,  0,  1, 2100, -1,  10,
+     1, 6194, 11, 0,  15,   0, 12,  0,   13,  0,   6,
+     0,   13,  1, 6,   6, 112, 90, 82,   66, 97, 115,
+    13,    2,  0, 0,  13,   3,  0,  0,   14,  0,   0,
+     1,    5,  1, 1,   1,   1,  0,  3,    1,  2,   5,
+     0,  420,  1, 0, 420,   0,  0,  0,    0,  0,   0,
+     0
+  ];
   
-  let p = decodePosition(r)
+  let player1 = [
+    90, 108,   38,  1,  8,  3,   0,   1, 2100,  -1,
+    10,   1, 6193, 11,  0, 15,   0,  12,    0,  13,
+    0,   6,    6, 80, 64, 98, 113, 105,   91,  13,
+    1,   6,    0, 13,  2,  0,   0,  13,    3,   0,
+    0,   3,    1,  2,  5,  0, 420,   1,    0, 420,
+    0,   0,    0,  0,  0,  0,   0
+  ];
+                    
+  
+  let p = decodePosition(player1)
   console.log(p)
   
-  let move = defend(p.playout, p.hand, p.trump);
+  let move = attack(p.playout, p.hand, p.trump);
   console.log(move);
 }
 
 //debug();
-login();
+socket = connect();
+//login();
