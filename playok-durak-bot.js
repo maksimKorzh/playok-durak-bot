@@ -11,6 +11,7 @@ var activeGame = 0;
 var TABLE = 0;
 
 function encodeCard(card) {
+  if (card == undefined) return 0;
   let suits = ['h', 'd', 'c', 's'];
   let ranks = ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
   let rank = ranks.indexOf(card.slice(0, card.length-1))+6;
@@ -43,18 +44,33 @@ function decodeCard(card) {
 
 function decodePosition(board) {
   let deck = board[12] >> 8;
-  let trump = decodeCard((((board[12] % 256) >> 3) << 3) | (board[12] % 8))
+  let trump = (((board[12] % 256) >> 3) << 3) | (board[12] % 8);
   let playout = [];
   let hand = [];
+  if (trump >= 24 && trump <= 115)
+    trump = decodeCard((((board[12] % 256) >> 3) << 3) | (board[12] % 8))
+  else trump = '6h' // placeholder
   for (let i=0; i < board.length; i++) {
     switch (board[i]) {
       case 11: // playout attack/deffense cards
-        console.log(board)
-        for (let j=i+2; j <= i+1+board[i+1]; j++) playout.push(decodeCard(board[j]));
+        for (let j=i+2; j <= i+1+board[i+1]; j++) {
+          if (board[j] >= 24 && board[j] <= 115)
+            playout.push(decodeCard(board[j]));
+        }
         break;
       case 13: // cards in hand
-        if (board[i+1] == 1)  for (let j=i+4; j <= i+3+board[i+3]; j++) hand.push(decodeCard(board[j]));
-        break;
+        if (board[i+1] == 1) {
+          for (let j=i+4; j <= i+3+board[i+3]; j++) {
+            if (board[j] >= 24 && board[j] <= 115)
+              hand.push(decodeCard(board[j]));
+          }
+        }
+        return {
+          deck: deck,
+          trump: trump,
+          playout: playout,
+          hand: hand
+        }
     }
   } return {
     deck: deck,
@@ -315,3 +331,20 @@ login();
 
 //let move = defend(['7s', '8s'], ['10d', '10s', 'Jc'], '8h');
 //console.log(move);
+
+//let card = decodeCard(65) // 8d
+//console.log(card)
+//
+//let r = [ // does not parse playout
+//    90, 133, 68,  1,   8,  3,   0,   1, 4493,  -1, 10,   1,
+//  3915,  11,  4, 48, 104, 49,  65,  15,    0,  12,  0,  13,
+//     0,   4,  0, 13,   1,  7,   7,  96,   56, 106, 90, 113,
+//    99,  59, 13,  2,   0,  0,  13,   3,    0,   0, 14,   0,
+//     1,   1, 20,  4,   1,  1, 257,   1,   13,   1,  1, 257,
+//     1,   6,  1,  1, 257,  1,   8,   1,    1,   0,  0,   3,
+//     1,   2,  5,  0, 795,  1,   0, 899,    0,   0,  0,   0,
+//     0,   0,  0
+//]
+//
+//let p = decodePosition(r)
+//console.log(p)
