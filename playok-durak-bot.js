@@ -270,8 +270,8 @@ function connect(ksession) {
         activeGame = 1;
         if (response.i[3]) {
           let move = '';
-          if (position.playout.length % 2) move = defend(position.playout, position.hand, position.trump);
-          else move = attack(position.playout, position.hand, position.trump);
+          if (response.i[response.i.length-7] == 1) move = defend(position.playout, position.hand, position.trump);
+          if (response.i[response.i.length-7] == 0) move = attack(position.playout, position.hand, position.trump);
           console.log('generated move:', move);
           let message = {};
           if (move == 'pass') {
@@ -290,14 +290,12 @@ function connect(ksession) {
     }
 
     if (response.i[0] == 81 && response.i[1] == TABLE) { // chat messages & system notifications
-    console.log('(CHAT) ' + response.s[0] + '<br>');
-    if (response.s[0].includes('resigns') ||
-        response.s[0].includes('wins') ||
-        response.s[0].includes('loses') ||
-        response.s[0].includes('exceeded')) {
+      console.log('\n\n\n\n\n(CHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAT) ' + response.s[0]);
+      if (response.s[0].includes('loses') ||
+          response.s[0].includes('exceeded')) {
           message(socket, 'leave', TABLE);
         }
-  }
+    }
   });
   socket.on('error', function (error) { console.log('playok: error'); });
   socket.on('close', function () {
@@ -323,19 +321,16 @@ login();
 //console.log(card)
 //
 //let r = [
-//      90, 101, 62,  1,  8,   3,   0,   1, 2084,  -1,  10,  1,
-//  5746,  11,  3, 48, 56,  57,  15,   0,   12,   0,  13,  0,
-//     4,   0, 13,  1,  7,   7, 104,  64,  106, 113,  75, 67,
-//    59,  13,  2,  0,  0,  13,   3,   0,    0,  14,   0,  2,
-//     1,  15,  3,  1,  1, 385,   1, 113,    1,   1, 129,  1,
-//     2,   1,  1,  0,  0,   3,   1,   2,    5,   0, 375,  0,
-//     0, 417,  1,  0,  0,   0,   0,   0,    0
+//  90,  119, 54,  1,  8,  3,  8,   1, 1872, -1,  10,
+//   1, 1640, 11, 11, 75, 99, 74,  56,   98, 64,  57,
+//  72,   97, 88, 89, 15,  0, 12,   0,   13,  0,  12,
+//   0,   13,  1,  1,  1, 58, 13,   2,    0,  0,  13,
+//   3,    0,  0, 14,  0,  2,  1,   5,    1,  1,   1,
+//   0,    0,  3,  1,  2,  5,  0, 325,    0,  0, 374,
+//   1,    0,  0,  0,  0,  0,  0
 //]
 //let p = decodePosition(r)
 //console.log(p)
 //
 //let move = defend(p.playout, p.hand, p.trump);
 //console.log(move);
-
-
-//{"i":[51],"s":["msg1","lead a card or pass","msg2","defend or take","msg3","add more cards to take or pass","bl_take","take","msc_add","adding cards","trump","trump:","bl_gt0","hearts","bl_gt1","diamonds","bl_gt2","clubs","bl_gt3","spades","win_pr0","pair NS wins","win_pr1","pair EW wins","bl_tram","the rest are mine","chr","recent messages","chd","delete all messages","bl_ad","add","bl_mr","more...","tu_bacc","accept","tu_brej","decline","tu_bcan","withdraw","bl_partinv","offer partnering","bl_whisper","chat","bl_newtab","new game table","bl_buds","contacts","bl_tbs","tables","bl_prefs","preferences","bl_cs","chats","tlh_tabpl","players","tl_join","join","bl_invite","invite","bl_boot","boot","bl_yes","yes","bl_no","no","ui_misc","table:","ui_block","block","ui_stats","full stats","bl_ok","ok","bl_cancel","cancel","bl_pass","pass","l_tab","table #%s","bl_start","start","bl_draw","draw","bl_resign","resign","bl_undo","undo","sw_chat","chat","sw_history","history","sw_users","users","sw_setup","settings","tb_ttpub","public","tb_ttprv","private","tb_gtnrt","non-rated","tb_tr_move","move time:","tb_tr_add","added time:","tb_tr_game","game time:","tb_noundo","no undo","pr_sel","select place","pr_sep","select place to play","aw_opp","awaiting opponent","aw_pls","awaiting missing players","aw_go","waiting for start","aw_rnd","waiting for the round to finish","p_igninv","ignore table invitations","p_ignprv","ignore private chats","p_prvbud","private chats only from contacts","p_bp","sounds","win_draw","draw","win_pl0","white wins","win_pl1","black wins","win_pln","player #%s wins","los_pln","player #%s loses","st_st1","online","bl_sb","spacebar","t_gsmp","guest","t_lgin","log in","t_lout","log out","t_hdrg","sign up","t_prof","profile","t_turs","tournaments","t_rot","rotate device","t_rpin","report insulting","bl_sit","sit","pr_sit","press 'sit' to take place at the table","pr_st","press 'start' to start a new game","pr_stcn","press 'start' to continue the game","aw_st","waiting for all players to press 'start'","gname","durak"]}
