@@ -6,9 +6,6 @@ const path = require('path');
 const logFile = fs.createWriteStream(path.join(__dirname, 'botlog.txt'), { flags: 'a' });
 const originalLog = console.log;
 
-const suits = ['♠', '♥', '♦', '♣'];
-const ranks = ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-
 var joinedTable = 0;
 var activeGame = 0;
 var TABLE = 0;
@@ -22,10 +19,25 @@ function encodeCard(card) {
 }
 
 function decodeCard(card) {
-  let suits = ['♥', '♦', '♣', '♠'];
+  let suits = ['h', 'd', 'c', 's'];
   let ranks = ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
   let suit = suits[card & 7];
   let rank = ranks[(card >> 3) - 6];
+  if (rank == undefined) {
+    console.log('ERROR CARD:', card);
+    process.exit();
+  }
+  
+//  [
+//    90, 133, 65,   1,   8,  3,  0,   1, 4468, -1,  10,  1,
+//  2617,  11,  4,  98, 106, 99, 65,  15,    0, 12,   0, 13,
+//     0,   4,  0,  13,   1,  4,  4, 114,  105, 97, 115, 13,
+//     2,   0,  0,  13,   3,  0,  0,  14,    0,  1,   1, 20,
+//     4,   1,  1, 257,   1, 13,  1,   1,  257,  1,  12,  1,
+//     1, 257,  1,   8,   1,  1,  0,   0,    3,  1,   2,  5,
+//     0, 721,  1,   2, 894,  0,  0,   0,    0,  0,   0,  0
+//  ]
+
   return rank+suit;
 }
 
@@ -37,6 +49,7 @@ function decodePosition(board) {
   for (let i=0; i < board.length; i++) {
     switch (board[i]) {
       case 11: // playout attack/deffense cards
+        console.log(board)
         for (let j=i+2; j <= i+1+board[i+1]; j++) playout.push(decodeCard(board[j]));
         break;
       case 13: // cards in hand
@@ -51,7 +64,53 @@ function decodePosition(board) {
   }
 }
 
-//for (let i of position) console.log(i, i%8, (i % 256 >> 3) - 2)
+function attack(playout, hand, trump) {
+  const rankOrder = {2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13,A:14};
+  const trumpSuit = trump.slice(-1);
+  const getRank = card => card.length === 3 ? card.slice(0, 2) : card[0];
+  const getSuit = card => card.slice(-1);
+  const isTrump = card => getSuit(card) === trumpSuit;
+  const sortByRank = cards => cards.slice().sort(
+    (a, b) => rankOrder[getRank(a)] - rankOrder[getRank(b)]
+  );
+  if (playout.length === 0) {
+    const nonTrumps = hand.filter(c => !isTrump(c));
+    if (nonTrumps.length) return sortByRank(nonTrumps)[0];
+    return sortByRank(hand)[0]; // all are trumps
+  }
+  const playoutRanks = playout.map(getRank);
+  const valid = hand.filter(c => playoutRanks.includes(getRank(c)));
+  const nonTrumps = valid.filter(c => !isTrump(c));
+  const allNonTrumps = hand.filter(c => c.slice(-1) !== trump.slice(-1));
+  if (nonTrumps.length) return sortByRank(nonTrumps)[0];
+  const trumps = valid.filter(isTrump);
+  if (trumps.length && !allNonTrumps.length) return sortByRank(trumps)[0];
+  return 'pass';
+}
+
+function defend(playout, hand, trump) {
+  const rankOrder = {2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13,A:14};
+  const getRank = card => card.length === 3 ? card.slice(0, 2) : card[0];
+  const getSuit = card => card.slice(-1);
+  const isTrump = card => getSuit(card) === trump.slice(-1);
+  if (playout.length === 0) return 'pass'; // nothing to defend
+  const attackCard = playout[playout.length - 1];
+  const attackRank = rankOrder[getRank(attackCard)];
+  const attackSuit = getSuit(attackCard);
+  const attackIsTrump = isTrump(attackCard);
+  const validDefenders = hand.filter(card => {
+    const suit = getSuit(card);
+    const rank = rankOrder[getRank(card)];
+    if (isTrump(card) && !attackIsTrump) return true; // any trump beats non-trump
+    if (suit === attackSuit && rank > attackRank) return true; // higher same-suit beats
+    if (isTrump(card) && attackIsTrump && rank > attackRank) return true; // higher trump beats lower trump
+    return false;
+  });
+  if (validDefenders.length === 0) return 'pass';
+  validDefenders.sort((a, b) => rankOrder[getRank(a)] - rankOrder[getRank(b)]);
+  return validDefenders[0];
+}
+
 console.log = function (...args) {
   const message = args.map(arg => {
     return typeof arg === 'string' ? arg : JSON.stringify(arg);
@@ -213,17 +272,14 @@ function connect(ksession) {
 
     if (response.i[0] == 90) {
       let position = decodePosition(response.i);
-      console.log('deck:', position.deck);
-      console.log('trump:', position.trump);
-      console.log('playout:', position.playout);
-      console.log('hand:', position.hand);
+      console.log(position);
       if (response.i[3] == -1) activeGame = 0;
       else {
         activeGame = 1;
         if (response.i[3]) {
-          if (position.playout.length % 2) console.log('Defending!');
-          else console.log('Attacking!');
-          let move = prompt('your turn: ');
+          let move = '';
+          if (position.playout.length % 2) move = defend(position.playout, position.hand, position.trump);
+          else move = attack(position.playout, position.hand, position.trump);
           if (move == 'pass') {
             let message = {"i":[92,TABLE,8,0,0]}
             message = JSON.stringify(message);
@@ -256,3 +312,6 @@ function connect(ksession) {
 login();
 //console.log(encodeCard('9c'))
 //console.log(encodeCard('10d'))
+
+//let move = defend(['7s', '8s'], ['10d', '10s', 'Jc'], '8h');
+//console.log(move);
