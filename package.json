@@ -1,0 +1,28 @@
+{
+  "name": "playok-durak-bot",
+  "version": "1.0.0",
+  "description": "fully automated bot to play durak on playok.com",
+  "main": "playok-durak-bot.js",
+  "scripts": {
+    "start": "node playok-durak-bot.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maksimKorzh/playok-durak-bot.git"
+  },
+  "keywords": [
+    "durak"
+  ],
+  "author": "cmk",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/maksimKorzh/playok-durak-bot/issues"
+  },
+  "homepage": "https://github.com/maksimKorzh/playok-durak-bot#readme",
+  "dependencies": {
+    "axios": "^1.10.0",
+    "axios-cookiejar-support": "^5.0.1",
+    "prompt-sync": "^4.2.0",
+    "tough-cookie": "^4.1.4"
+  }
+}
