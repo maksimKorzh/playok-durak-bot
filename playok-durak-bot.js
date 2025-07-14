@@ -31,24 +31,23 @@ function decodeCard(card) {
 
 function decodePosition(board) {
   let deck = board[12] >> 8;
-  console.log('deck:', deck);
   let trump = decodeCard((((board[12] % 256) >> 3) << 3) | (board[12] % 8))
-  console.log('trump:', trump);
+  let playout = [];
+  let hand = [];
   for (let i=0; i < board.length; i++) {
     switch (board[i]) {
       case 11: // playout attack/deffense cards
-        let playout = [];
         for (let j=i+2; j <= i+1+board[i+1]; j++) playout.push(decodeCard(board[j]));
-        console.log('playout:', playout);
         break;
-      case 13:
-        let hand = [];
-        if (board[i+1] == 1) {  // cards in hand
-          for (let j=i+4; j <= i+3+board[i+3]; j++) hand.push(decodeCard(board[j]));
-          console.log('hand:', hand);
-        }
+      case 13: // cards in hand
+        if (board[i+1] == 1)  for (let j=i+4; j <= i+3+board[i+3]; j++) hand.push(decodeCard(board[j]));
         break;
     }
+  } return {
+    deck: deck,
+    trump: trump,
+    playout: playout,
+    hand: hand
   }
 }
 
@@ -213,11 +212,17 @@ function connect(ksession) {
     //if (TABLE && response.i[1] == TABLE) console.log(data.toString());
 
     if (response.i[0] == 90) {
-      decodePosition(response.i)
+      let position = decodePosition(response.i);
+      console.log('deck:', position.deck);
+      console.log('trump:', position.trump);
+      console.log('playout:', position.playout);
+      console.log('hand:', position.hand);
       if (response.i[3] == -1) activeGame = 0;
       else {
         activeGame = 1;
         if (response.i[3]) {
+          if (position.playout.length % 2) console.log('Defending!');
+          else console.log('Attacking!');
           let move = prompt('your turn: ');
           if (move == 'pass') {
             let message = {"i":[92,TABLE,8,0,0]}
@@ -231,12 +236,6 @@ function connect(ksession) {
             console.log(message);
             socket.send(message);
           }
-          // Qh attacks {"i":[92,117,8,0,224,117]}
-          // 9c deffends {"i":[92,117,8,0,202,54]}
-          // 9d attacks {"i":[92,117,8,0,201,36]}
-          // pass {"i":[92,117,8,0,113]}
-          // take {"i":[92,110,8,0,123]}
-          //      {"i":[92,110,8,0,90]}
         }
       }
     }
