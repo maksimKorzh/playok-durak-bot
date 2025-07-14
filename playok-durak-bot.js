@@ -24,10 +24,14 @@ function decodeCard(card) {
   let ranks = ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
   let suit = suits[card & 7];
   let rank = ranks[(card >> 3) - 6];
+  
+  // remove later
   if (rank == undefined) {
     console.log('ERROR CARD:', card);
     process.exit();
-  } return rank+suit;
+  }
+  
+  return rank+suit;
 }
 
 function decodePosition(board) {
@@ -64,7 +68,6 @@ function decodePosition(board) {
 }
 
 function attack(playout, hand, trump) {
-  console.log('ATTACK:', playout, hand, trump);
   const rankOrder = {2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13,A:14};
   const trumpSuit = trump.slice(-1);
   const getRank = card => card.length === 3 ? card.slice(0, 2) : card[0];
@@ -89,7 +92,6 @@ function attack(playout, hand, trump) {
 }
 
 function defend(playout, hand, trump) {
-  console.log('DEFEND:', playout, hand, trump);
   const rankOrder = {2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13,A:14};
   const getRank = card => card.length === 3 ? card.slice(0, 2) : card[0];
   const getSuit = card => card.slice(-1);
@@ -109,7 +111,6 @@ function defend(playout, hand, trump) {
   });
   if (validDefenders.length === 0) return 'pass';
   validDefenders.sort((a, b) => rankOrder[getRank(a)] - rankOrder[getRank(b)]);
-  console.log('defenders:', validDefenders);
   if (isTrump(validDefenders[0])) {
     for (let i of validDefenders)
       if (!isTrump(i)) return i;
@@ -138,10 +139,10 @@ function message(socket, action, table) {
       request.i = [72, table];
       TABLE = table;
       joinedTable = 1;
-      console.log('playok: joined table #' + table);
+      console.log('joined table #' + table);
       break;
     case 'leave':
-      console.log('playok: leaving table #' + table);
+      console.log('leaving table #' + table);
       request.i = [73, table];
       TABLE = 0;
       joinedTable = 0;
@@ -149,19 +150,19 @@ function message(socket, action, table) {
       break;
     case 'player2':
       request.i = [83, table, 1];
-      console.log('playok: took player2 place at table #' + table);
+      console.log('took player2 place at table #' + table);
       break;
     case 'player1':
       request.i = [83, table, 0];
-      console.log('playok: took player1 place at table #' + table);
+      console.log('took player1 place at table #' + table);
       break;
     case 'start':
       activeGame = 0;
       request.i = [85, table];
-      console.log('playok: attempting to start a game at table #' + table);
+      console.log('attempting to start a game at table #' + table);
       setTimeout(function() {
         if (!activeGame) {
-          console.log('playok: opponent refused to start game at table #' + table);
+          console.log('opponent refused to start game at table #' + table);
           message(socket, 'leave', table);
         }
       }, 5000);
@@ -206,10 +207,10 @@ function login() {
     const cookies = await cookieJar.getCookies('https://www.playok.com');
     
     if (response.data.toLowerCase().includes('log in')) {
-      console.log('playok: login failed');
+      console.log('login failed');
       login();
     } else {
-      console.log('playok: logged in as "' + username + '"');
+      console.log('logged in as "' + username + '"');
       cookies.forEach(function(c) { if (c.key == 'ksession') socket = connect(c.value.split(':')[0]); });
     }
   })();
@@ -236,7 +237,7 @@ function connect(ksession) {
       ]}
     );
     socket.send(initialMessage);
-    console.log('playok: connected to websocket');
+    console.log('connected to websocket');
     setInterval(function() {
       const keepAliveMessage = JSON.stringify({ "i": [] });
       socket.send(keepAliveMessage);
@@ -251,12 +252,10 @@ function connect(ksession) {
       if (joinedTable == 1) return;
    
       // DEBUG
-      if (player1 != 'cft7821g') return;
+      //if (player1 != 'cft7821g') return;
 
       // 2 players
       if (response.i[5] == 3 && response.i[6] == 3) {
-        //if (response.s[0].includes('+')) return; // no adding cards
-        console.log(table, player1, player2)
         if (response.i[3] == 1 && response.i[4] == 0) acceptChallenge(socket, 'player2', table);
         if (response.i[3] == 0 && response.i[4] == 1) acceptChallenge(socket, 'player1', table);
       }
@@ -264,7 +263,6 @@ function connect(ksession) {
     
     if (response.i[0] == 90) {
       let position = decodePosition(response.i);
-      console.log('response 90:', response.i);
       if (response.i[3] == -1) {
         activeGame = 0;
         setTimeout(function() {
@@ -279,7 +277,7 @@ function connect(ksession) {
           let move = '';
           if (response.i[response.i.length-7] == 1) move = defend(position.playout, position.hand, position.trump);
           if (response.i[response.i.length-7] == 0) move = attack(position.playout, position.hand, position.trump);
-          console.log('generated move:', move);
+          console.log('generated move', move);
           let message = {};
           if (move == 'pass') {
             message = {"i":[92,TABLE,8,0,0]}
@@ -294,40 +292,30 @@ function connect(ksession) {
       }
     }
   });
-  socket.on('error', function (error) { console.log('playok: error'); });
+  socket.on('error', function (error) { console.log('websocket error'); });
   socket.on('close', function () {
-    console.log('playok: websocket connection closed');
+    console.log('websocket connection closed');
     process.exit();
   }); return socket;
 }
 
-//process.on('SIGINT', function() { // Ctrl-C: force resign, Ctrl-\ to quit (linux)
-//});
+function debug() {
+  let r = [
+    90,  119, 54,  1,  8,  3,  8,   1, 1872, -1,  10,
+     1, 1640, 11, 11, 75, 99, 74,  56,   98, 64,  57,
+    72,   97, 88, 89, 15,  0, 12,   0,   13,  0,  12,
+     0,   13,  1,  1,  1, 58, 13,   2,    0,  0,  13,
+     3,    0,  0, 14,  0,  2,  1,   5,    1,  1,   1,
+     0,    0,  3,  1,  2,  5,  0, 325,    0,  0, 374,
+     1,    0,  0,  0,  0,  0,  0
+  ]
+  
+  let p = decodePosition(r)
+  console.log(p)
+  
+  let move = defend(p.playout, p.hand, p.trump);
+  console.log(move);
+}
 
-//setInterval(function() {
-//}, 60000)
-
+//debug();
 login();
-//console.log(encodeCard('9c'))
-//console.log(encodeCard('10d'))
-
-//let move = defend(['7s', '8s'], ['10d', '10s', 'Jc'], '8h');
-//console.log(move);
-
-//let card = decodeCard(65) // 8d
-//console.log(card)
-//
-//let r = [
-//  90,  119, 54,  1,  8,  3,  8,   1, 1872, -1,  10,
-//   1, 1640, 11, 11, 75, 99, 74,  56,   98, 64,  57,
-//  72,   97, 88, 89, 15,  0, 12,   0,   13,  0,  12,
-//   0,   13,  1,  1,  1, 58, 13,   2,    0,  0,  13,
-//   3,    0,  0, 14,  0,  2,  1,   5,    1,  1,   1,
-//   0,    0,  3,  1,  2,  5,  0, 325,    0,  0, 374,
-//   1,    0,  0,  0,  0,  0,  0
-//]
-//let p = decodePosition(r)
-//console.log(p)
-//
-//let move = defend(p.playout, p.hand, p.trump);
-//console.log(move);
