@@ -65,12 +65,7 @@ function decodePosition(board) {
               hand.push(decodeCard(board[j]));
           }
         }
-        return {
-          deck: deck,
-          trump: trump,
-          playout: playout,
-          hand: hand
-        }
+        break;
     }
   } return {
     deck: deck,
@@ -81,6 +76,7 @@ function decodePosition(board) {
 }
 
 function attack(playout, hand, trump) {
+  console.log('ATTACK:', playout, hand, trump);
   const rankOrder = {2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13,A:14};
   const trumpSuit = trump.slice(-1);
   const getRank = card => card.length === 3 ? card.slice(0, 2) : card[0];
@@ -105,6 +101,7 @@ function attack(playout, hand, trump) {
 }
 
 function defend(playout, hand, trump) {
+  console.log('DEFEND:', playout, hand, trump);
   const rankOrder = {2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13,A:14};
   const getRank = card => card.length === 3 ? card.slice(0, 2) : card[0];
   const getSuit = card => card.slice(-1);
@@ -296,6 +293,7 @@ function connect(ksession) {
           let move = '';
           if (position.playout.length % 2) move = defend(position.playout, position.hand, position.trump);
           else move = attack(position.playout, position.hand, position.trump);
+          console.log('generated move:', move);
           if (move == 'pass') {
             let message = {"i":[92,TABLE,8,0,0]}
             message = JSON.stringify(message);
@@ -335,7 +333,7 @@ login();
 //let card = decodeCard(65) // 8d
 //console.log(card)
 //
-//let r = [ // does not parse playout
+//let r = [  //does not parse playout
 //    90, 133, 68,  1,   8,  3,   0,   1, 4493,  -1, 10,   1,
 //  3915,  11,  4, 48, 104, 49,  65,  15,    0,  12,  0,  13,
 //     0,   4,  0, 13,   1,  7,   7,  96,   56, 106, 90, 113,
