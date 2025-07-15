@@ -45,7 +45,7 @@ function decodePosition(board) {
   else trump = '6h' // placeholder
   for (let i=0; i < board.length; i++) {
     switch (board[i]) {
-      case 11: // playout attack/deffense cards
+      case 11: // playout cards
         for (let j=i+2; j <= i+1+board[i+1]; j++) {
           if (board[j] >= 24 && board[j] <= 115)
             playout.push(decodeCard(board[j]));
@@ -53,7 +53,12 @@ function decodePosition(board) {
         break;
       case 13: // cards in hand
         if (board[i+1] == (botSide == 'player2' ? 1 : 0)) {
-          for (let j=i+4; j <= i+3+board[i+3]; j++) {
+          let startIndex = i+4;
+          let numCards = board[i+3]-1;
+          //console.log('startIndex:', startIndex, 'numCards:', numCards, 'endIndex:', startIndex + numCards);
+          for (let j=startIndex; j <= startIndex + numCards; j++) {
+            //console.log('decode:', j, board[i+3], board[j]);
+            if (board[j] < 24 || board[j] > 115) break;
             if (board[j] >= 24 && board[j] <= 115)
               hand.push(decodeCard(board[j]));
           }
@@ -281,21 +286,26 @@ function connect(ksession) {
       } else {
         activeGame = 1;
         console.log(response.i);
-        if (response.i[3]) { // player1 == 0
+        if (response.i[3] == (botSide == 'player1' ? 0 : 1)) { // == 1 for player2
           let move = '';
-          if (response.i[response.i.length-7] == 1) move = defend(position.playout, position.hand, position.trump);
-          if (response.i[response.i.length-7] == 0) move = attack(position.playout, position.hand, position.trump);
+          if (response.i[response.i.length-7] == (botSide == 'player1' ? 0 : 1)) move = defend(position.playout, position.hand, position.trump);  // == 1 for player2
+          if (response.i[response.i.length-7] == (botSide == 'player1' ? 1 : 0)) move = attack(position.playout, position.hand, position.trump);  // == 0 for player1
           console.log('generated move', move);
+          if (move == undefined) process.exit();
           let message = {};
           if (move == 'pass') {
             message = {"i":[92,TABLE,8,0,0]}
             message = JSON.stringify(message);
           } else {
             let card = encodeCard(move);
-            move = {"i": [92, TABLE, 8, 0, (card+128)&-5, 0]};
+            if (botSide == 'player2') card += 128;
+            move = {"i": [92, TABLE, 8, 0, (card&-5), 0]};
             message = JSON.stringify(move);
           }
-          setTimeout(function () { socket.send(message); }, 500);
+          setTimeout(function () {
+            console.log('sending:', message);
+            socket.send(message);
+          }, 500);
         }
       }
     }
@@ -319,20 +329,20 @@ function debug() {
   ];
   
   let player1 = [
-    90, 108,   38,  1,  8,  3,   0,   1, 2100,  -1,
-    10,   1, 6193, 11,  0, 15,   0,  12,    0,  13,
-    0,   6,    6, 80, 64, 98, 113, 105,   91,  13,
-    1,   6,    0, 13,  2,  0,   0,  13,    3,   0,
-    0,   3,    1,  2,  5,  0, 420,   1,    0, 420,
-    0,   0,    0,  0,  0,  0,   0
+  90, 133,   43,  1,   8,   3,   0,   1, 1303, -1,
+  10,   1, 2401, 11,   3, 106, 114, 112,   15,  0,
+  12,   0,   13,  0,   8,   8, 104,  96,   80, 64,
+  98,  82,   74, 66,  13,   1,   4,   0,   13,  2,
+   0,   0,   13,  3,   0,   0,   3,   1,    2,  5,
+   0, 377,    1,  1, 261,   0,   0,   0,    0,  0,
+   0,   0
   ];
                     
   
   let p = decodePosition(player1)
-  console.log(p)
+  console.log('POSITION:', p)
   
-  let move = attack(p.playout, p.hand, p.trump);
-  console.log(move);
+  let move = defend(p.playout, p.hand, p.trump);
 }
 
 //debug();
