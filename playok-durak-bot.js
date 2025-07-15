@@ -264,7 +264,7 @@ function connect(ksession) {
       if (joinedTable == 1) return;
    
       // DEBUG
-      if (player2 != 'cft7821g') return;
+      //if (player1 != 'cft7821g') return;
 
       // 2 players
       if (response.i[5] == 3 && response.i[6] == 3) {
@@ -273,16 +273,20 @@ function connect(ksession) {
       }
     }
     
+    if (response.i[0] == 81 && response.i[1] == TABLE) { // chat messages & system notifications
+      if (response.s[0].includes('exceeded') ||
+          response.s[0].includes('booted') ||
+          response.s[0].includes('offline') ||
+          response.s[0].includes('displaced')) {
+            console.log(response.s[0]);
+            message(socket, 'leave', response.i[1]);
+          }
+    }
+    
     if (response.i[0] == 90) {
       let position = decodePosition(response.i);
       if (response.i[3] == -1) {
         activeGame = 0;
-        setTimeout(function() {
-          if (!activeGame) {
-            console.log('game finished');
-            if (TABLE) message(socket, 'leave', TABLE);
-          }
-        }, 5000);
       } else {
         activeGame = 1;
         console.log(response.i);
@@ -305,7 +309,7 @@ function connect(ksession) {
           setTimeout(function () {
             console.log('sending:', message);
             socket.send(message);
-          }, 500);
+          }, 1);
         }
       }
     }
@@ -344,6 +348,14 @@ function debug() {
   
   let move = defend(p.playout, p.hand, p.trump);
 }
+
+setInterval(function() {
+  // Leave after game ends
+  if (joinedTable == 1 && activeGame == 0 && TABLE) {
+    console.log('finished game at table #' + TABLE);
+    message(socket, 'leave', TABLE);
+  }
+}, 1000)
 
 //debug();
 socket = connect();
