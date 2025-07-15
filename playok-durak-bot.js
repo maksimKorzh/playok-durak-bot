@@ -25,14 +25,10 @@ function decodeCard(card) {
   let ranks = ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
   let suit = suits[card & 7];
   let rank = ranks[(card >> 3) - 6];
-  
-  // remove later
   if (rank == undefined) {
-    console.log('ERROR CARD:', card);
-    process.exit();
-  }
-  
-  return rank+suit;
+    console.log('ERROR CARD', card); // usually should not but sometimes trump parsing gets here
+    return 0;
+  } return rank+suit;
 }
 
 function decodePosition(board) {
@@ -41,7 +37,8 @@ function decodePosition(board) {
   let playout = [];
   let hand = [];
   if (trump >= 24 && trump <= 115)
-    trump = decodeCard((((board[12] % 256) >> 3) << 3) | (board[12] % 8))
+    if (decodeCard(trump)) trump = decodeCard(trump);
+    else trump = '6h';
   else trump = '6h' // placeholder
   for (let i=0; i < board.length; i++) {
     switch (board[i]) {
@@ -74,7 +71,7 @@ function decodePosition(board) {
 }
 
 function attack(playout, hand, trump) {
-  console.log('attack:', playout, hand, trump);
+  //console.log('attack', playout, hand, trump);
   const rankOrder = {2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13,A:14};
   const trumpSuit = trump.slice(-1);
   const getRank = card => card.length === 3 ? card.slice(0, 2) : card[0];
@@ -99,7 +96,7 @@ function attack(playout, hand, trump) {
 }
 
 function defend(playout, hand, trump) {
-  console.log('deffend:', playout, hand, trump);
+  console.log('deffend', playout, hand, trump);
   const rankOrder = {2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13,A:14};
   const getRank = card => card.length === 3 ? card.slice(0, 2) : card[0];
   const getSuit = card => card.slice(-1);
@@ -237,8 +234,7 @@ function connect(ksession) {
     const initialMessage = JSON.stringify({
       "i":[1742],
       "s":[
-        //ksession,
-        "+442266185138966324|1249210350|15421574", //  tgb6968g
+        ksession,
         "en",
         "b",
         "",
@@ -263,10 +259,7 @@ function connect(ksession) {
       let player2 = response.s[2];
       if (joinedTable == 1) return;
    
-      // DEBUG
-      //if (player1 != 'cft7821g') return;
-
-      // 2 players
+      // 2 players (4 players is possible but not supported)
       if (response.i[5] == 3 && response.i[6] == 3) {
         if (response.i[3] == 1 && response.i[4] == 0) acceptChallenge(socket, 'player2', table);
         if (response.i[3] == 0 && response.i[4] == 1) acceptChallenge(socket, 'player1', table);
@@ -289,6 +282,7 @@ function connect(ksession) {
         activeGame = 0;
       } else {
         activeGame = 1;
+        console.log('cards', position.playout.toString());
         console.log(response.i);
         if (response.i[3] == (botSide == 'player1' ? 0 : 1)) { // == 1 for player2
           let move = '';
@@ -307,9 +301,8 @@ function connect(ksession) {
             message = JSON.stringify(move);
           }
           setTimeout(function () {
-            console.log('sending:', message);
             socket.send(message);
-          }, 1);
+          }, 500);
         }
       }
     }
@@ -321,42 +314,12 @@ function connect(ksession) {
   }); return socket;
 }
 
-function debug() {
-  let player2 = [
-    90,  108, 48, 1,   8,   3,  0,  1, 2100, -1,  10,
-     1, 6194, 11, 0,  15,   0, 12,  0,   13,  0,   6,
-     0,   13,  1, 6,   6, 112, 90, 82,   66, 97, 115,
-    13,    2,  0, 0,  13,   3,  0,  0,   14,  0,   0,
-     1,    5,  1, 1,   1,   1,  0,  3,    1,  2,   5,
-     0,  420,  1, 0, 420,   0,  0,  0,    0,  0,   0,
-     0
-  ];
-  
-  let player1 = [
-  90, 133,   43,  1,   8,   3,   0,   1, 1303, -1,
-  10,   1, 2401, 11,   3, 106, 114, 112,   15,  0,
-  12,   0,   13,  0,   8,   8, 104,  96,   80, 64,
-  98,  82,   74, 66,  13,   1,   4,   0,   13,  2,
-   0,   0,   13,  3,   0,   0,   3,   1,    2,  5,
-   0, 377,    1,  1, 261,   0,   0,   0,    0,  0,
-   0,   0
-  ];
-                    
-  
-  let p = decodePosition(player1)
-  console.log('POSITION:', p)
-  
-  let move = defend(p.playout, p.hand, p.trump);
-}
-
 setInterval(function() {
   // Leave after game ends
   if (joinedTable == 1 && activeGame == 0 && TABLE) {
-    console.log('finished game at table #' + TABLE);
+    console.log('no active game at table #' + TABLE);
     message(socket, 'leave', TABLE);
   }
-}, 1000)
+}, 15000)
 
-//debug();
-socket = connect();
-//login();
+login();
